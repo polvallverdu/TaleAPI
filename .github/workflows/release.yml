@@ -1,0 +1,106 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Run tests
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: ./gradlew test
+
+      - name: Build artifacts
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+        run: ./gradlew build
+
+      - name: Publish to GitHub Packages
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: ./gradlew publish
+
+      - name: Generate changelog
+        id: changelog
+        uses: metcalfc/changelog-generator@v4.3.1
+        with:
+          myToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: TaleAPI v${{ steps.version.outputs.VERSION }}
+          body: |
+            ## What's Changed
+            
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ## Installation
+            
+            ### Gradle (Kotlin DSL)
+            ```kotlin
+            repositories {
+                maven {
+                    url = uri("https://maven.pkg.github.com/polvallverdu/TaleAPI")
+                    credentials {
+                        username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
+                        password = project.findProperty("gpr.token") as String? ?: System.getenv("GITHUB_TOKEN")
+                    }
+                }
+            }
+            
+            dependencies {
+                implementation("dev.polv.taleapi:TaleAPI:${{ steps.version.outputs.VERSION }}")
+            }
+            ```
+            
+            ### Gradle (Groovy)
+            ```groovy
+            repositories {
+                maven {
+                    url = "https://maven.pkg.github.com/polvallverdu/TaleAPI"
+                    credentials {
+                        username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
+                        password = project.findProperty("gpr.token") ?: System.getenv("GITHUB_TOKEN")
+                    }
+                }
+            }
+            
+            dependencies {
+                implementation "dev.polv.taleapi:TaleAPI:${{ steps.version.outputs.VERSION }}"
+            }
+            ```
+          files: |
+            build/libs/*.jar
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.VERSION, '-') }}
+          generate_release_notes: false
+

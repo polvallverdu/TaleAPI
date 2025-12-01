@@ -15,7 +15,7 @@ permissions:
 # Allow only one concurrent deployment
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build-docs:
@@ -26,13 +26,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Extract version
+      - name: Extract version info
         id: version
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+            VERSION="${GITHUB_REF_NAME#v}"
+            echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+            echo "IS_RELEASE=true" >> $GITHUB_OUTPUT
+            echo "FOLDER=$VERSION" >> $GITHUB_OUTPUT
           else
             echo "VERSION=SNAPSHOT" >> $GITHUB_OUTPUT
+            echo "IS_RELEASE=false" >> $GITHUB_OUTPUT
+            echo "FOLDER=snapshot" >> $GITHUB_OUTPUT
           fi
 
       - name: Set up JDK 17
@@ -49,13 +54,280 @@ jobs:
           VERSION: ${{ steps.version.outputs.VERSION }}
         run: ./gradlew javadoc
 
+      - name: Download existing docs
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: existing-docs
+        continue-on-error: true
+
+      - name: Prepare versioned docs
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          FOLDER: ${{ steps.version.outputs.FOLDER }}
+          IS_RELEASE: ${{ steps.version.outputs.IS_RELEASE }}
+        run: |
+          # Create docs directory structure
+          mkdir -p docs-site
+          
+          # Copy existing docs if they exist
+          if [ -d "existing-docs" ] && [ "$(ls -A existing-docs 2>/dev/null)" ]; then
+            # Copy everything except .git
+            find existing-docs -mindepth 1 -maxdepth 1 ! -name '.git' -exec cp -r {} docs-site/ \;
+          fi
+          
+          # Add new version
+          rm -rf "docs-site/$FOLDER"
+          cp -r build/docs/javadoc "docs-site/$FOLDER"
+          
+          # Update latest/ for release versions
+          if [ "$IS_RELEASE" = "true" ]; then
+            rm -rf docs-site/latest
+            cp -r build/docs/javadoc docs-site/latest
+          fi
+
+      - name: Generate index page
+        env:
+          VERSION: ${{ steps.version.outputs.VERSION }}
+          IS_RELEASE: ${{ steps.version.outputs.IS_RELEASE }}
+        run: |
+          cd docs-site
+          
+          # Collect all versions (directories that look like semver or 'snapshot'/'latest')
+          VERSIONS=""
+          LATEST_VERSION=""
+          
+          for dir in */; do
+            dir="${dir%/}"
+            if [[ "$dir" =~ ^[0-9]+\.[0-9]+ ]] || [ "$dir" = "snapshot" ]; then
+              if [[ "$dir" =~ ^[0-9]+\.[0-9]+ ]]; then
+                VERSIONS="$VERSIONS $dir"
+                # Track latest semver version
+                if [ -z "$LATEST_VERSION" ] || [[ "$dir" > "$LATEST_VERSION" ]]; then
+                  LATEST_VERSION="$dir"
+                fi
+              fi
+            fi
+          done
+          
+          # Sort versions in reverse order (newest first)
+          SORTED_VERSIONS=$(echo $VERSIONS | tr ' ' '\n' | sort -rV | tr '\n' ' ')
+          
+          cat > index.html << 'HTMLEOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>TaleAPI Documentation</title>
+            <style>
+              :root {
+                --bg: #0d1117;
+                --surface: #161b22;
+                --border: #30363d;
+                --text: #e6edf3;
+                --text-muted: #8b949e;
+                --accent: #58a6ff;
+                --accent-hover: #79b8ff;
+                --success: #3fb950;
+              }
+              
+              * { box-sizing: border-box; margin: 0; padding: 0; }
+              
+              body {
+                font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+                background: var(--bg);
+                color: var(--text);
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 3rem 1.5rem;
+              }
+              
+              .container {
+                max-width: 640px;
+                width: 100%;
+              }
+              
+              header {
+                text-align: center;
+                margin-bottom: 3rem;
+              }
+              
+              h1 {
+                font-size: 2.5rem;
+                font-weight: 600;
+                margin-bottom: 0.5rem;
+                background: linear-gradient(135deg, var(--accent), var(--success));
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+              }
+              
+              .subtitle {
+                color: var(--text-muted);
+                font-size: 1.1rem;
+              }
+              
+              .section {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 12px;
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+              }
+              
+              .section-title {
+                font-size: 0.85rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: var(--text-muted);
+                margin-bottom: 1rem;
+              }
+              
+              .version-list {
+                list-style: none;
+              }
+              
+              .version-list li {
+                margin-bottom: 0.5rem;
+              }
+              
+              .version-list li:last-child {
+                margin-bottom: 0;
+              }
+              
+              a {
+                color: var(--accent);
+                text-decoration: none;
+                display: flex;
+                align-items: center;
+                padding: 0.75rem 1rem;
+                border-radius: 8px;
+                transition: all 0.15s ease;
+                border: 1px solid transparent;
+              }
+              
+              a:hover {
+                background: rgba(88, 166, 255, 0.1);
+                border-color: var(--border);
+                color: var(--accent-hover);
+              }
+              
+              .version-name {
+                font-family: 'SF Mono', 'Consolas', monospace;
+                font-weight: 500;
+              }
+              
+              .badge {
+                font-size: 0.7rem;
+                padding: 0.2rem 0.5rem;
+                border-radius: 4px;
+                margin-left: auto;
+                font-weight: 600;
+                text-transform: uppercase;
+              }
+              
+              .badge-latest {
+                background: var(--success);
+                color: var(--bg);
+              }
+              
+              .badge-dev {
+                background: var(--border);
+                color: var(--text-muted);
+              }
+              
+              footer {
+                margin-top: auto;
+                padding-top: 2rem;
+                color: var(--text-muted);
+                font-size: 0.9rem;
+                text-align: center;
+              }
+              
+              footer a {
+                display: inline;
+                padding: 0;
+                color: var(--accent);
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <header>
+                <h1>TaleAPI</h1>
+                <p class="subtitle">Hytale Modding Abstraction Layer</p>
+              </header>
+              
+              <section class="section">
+                <h2 class="section-title">Latest Stable</h2>
+                <ul class="version-list">
+                  <li>
+                    <a href="./latest/">
+                      <span class="version-name">latest</span>
+                      <span class="badge badge-latest">Recommended</span>
+                    </a>
+                  </li>
+                </ul>
+              </section>
+              
+              <section class="section">
+                <h2 class="section-title">All Versions</h2>
+                <ul class="version-list" id="versions">
+                  <!-- Versions will be injected here -->
+                </ul>
+              </section>
+              
+              <section class="section">
+                <h2 class="section-title">Development</h2>
+                <ul class="version-list">
+                  <li>
+                    <a href="./snapshot/">
+                      <span class="version-name">snapshot</span>
+                      <span class="badge badge-dev">Unstable</span>
+                    </a>
+                  </li>
+                </ul>
+              </section>
+            </div>
+            
+            <footer>
+              <a href="https://github.com/polvallverdu/TaleAPI">View on GitHub</a>
+            </footer>
+          </body>
+          </html>
+          HTMLEOF
+          
+          # Inject version list into HTML
+          VERSION_HTML=""
+          FIRST=true
+          for v in $SORTED_VERSIONS; do
+            if [ "$FIRST" = true ]; then
+              VERSION_HTML="$VERSION_HTML<li><a href=\"./$v/\"><span class=\"version-name\">$v</span><span class=\"badge badge-latest\">Latest</span></a></li>"
+              FIRST=false
+            else
+              VERSION_HTML="$VERSION_HTML<li><a href=\"./$v/\"><span class=\"version-name\">$v</span></a></li>"
+            fi
+          done
+          
+          # Handle case with no versions yet
+          if [ -z "$VERSION_HTML" ]; then
+            VERSION_HTML="<li><span style=\"color: var(--text-muted); padding: 0.75rem 1rem;\">No releases yet</span></li>"
+          fi
+          
+          # Replace placeholder with actual versions
+          sed -i "s|<!-- Versions will be injected here -->|$VERSION_HTML|" index.html
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: build/docs/javadoc
+          path: docs-site
 
   deploy-docs:
     name: Deploy to GitHub Pages
@@ -69,4 +341,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-

@@ -28,7 +28,7 @@ import java.util.Set;
     "dev.polv.taleapi.codegen.annotation.Block",
     "dev.polv.taleapi.codegen.annotation.Item"
 })
-@SupportedSourceVersion(SourceVersion.RELEASE_21)
+@SupportedSourceVersion(SourceVersion.RELEASE_17)
 public class TaleAnnotationProcessor extends AbstractProcessor {
 
   @Override

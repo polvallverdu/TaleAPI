@@ -22,6 +22,7 @@ With those principles in mind, this API features:
 
 - 🎯 **Event system** — Priorities, cancellation, and async support
 - 💬 **Command API** — Brigadier-inspired commands with autocompletion and permissions
+- 🔐 **Permission system** — Extensible SPI-based permissions with dynamic values and context
 - ⚙️ **Configuration API** — Object mapping and dynamic access with JSON support
 - 🎮 **Entity abstraction** — Type-safe entity handling
 - 🧱 **Block & Item abstractions** — Simplified block and item management
@@ -45,6 +46,7 @@ dependencies {
 
 - [Events](docs/events.md) — Event system with priorities and cancellation
 - [Commands](docs/commands.md) — Brigadier-inspired command API with autocompletion
+- [Permissions](docs/permissions.md) — Extensible permission system with dynamic values
 - [Configuration](docs/config.md) — Type-safe configuration loading and saving
 - [Codegen](docs/codegen.md) — Generate JSON files from annotated classes
 

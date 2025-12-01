@@ -1,6 +1,7 @@
 package dev.polv.taleapi.command;
 
 import dev.polv.taleapi.command.suggestion.Suggestions;
+import dev.polv.taleapi.event.EventResult;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -173,6 +174,11 @@ public final class CommandRegistry {
 
   /**
    * Dispatches a command from the given input.
+   * <p>
+   * This method fires the {@link CommandExecuteCallback} event before executing
+   * the command. If the event is cancelled, the command will not be executed
+   * and this method returns {@link CommandResult#FAILURE}.
+   * </p>
    *
    * @param sender the command sender
    * @param input  the full command input (with or without leading slash)
@@ -195,6 +201,14 @@ public final class CommandRegistry {
 
     Command command = getCommand(commandName)
         .orElseThrow(() -> CommandException.syntax("Unknown command: " + commandName));
+
+    // Fire the CommandExecuteCallback event
+    EventResult eventResult = CommandExecuteCallback.EVENT.invoker()
+        .onCommandExecute(sender, command, normalizedInput);
+
+    if (eventResult.isCancelled()) {
+      return CommandResult.FAILURE;
+    }
 
     return command.execute(sender, normalizedInput);
   }

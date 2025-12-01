@@ -1,10 +1,14 @@
 package dev.polv.taleapi.entity;
 
+import dev.polv.taleapi.permission.PermissionHolder;
+import dev.polv.taleapi.permission.PermissionResult;
+
 /**
  * Represents a player in Hytale.
  * <p>
  * Players are a specialized type of entity with additional player-specific
- * functionality. They inherit all entity behavior from {@link TaleEntity}.
+ * functionality. They inherit all entity behavior from {@link TaleEntity}
+ * and permission capabilities from {@link PermissionHolder}.
  * </p>
  * 
  * <h2>Event Behavior</h2>
@@ -14,8 +18,26 @@ package dev.polv.taleapi.entity;
  * to entity events, you can check if the entity is a player using
  * {@code instanceof TalePlayer}.
  * </p>
+ *
+ * <h2>Permissions</h2>
+ * <p>
+ * Players implement {@link PermissionHolder}, providing access to the
+ * extensible permission system. Use {@link #hasPermission(String)} for
+ * simple checks, or {@link #getPermissionValue(String)} for dynamic values.
+ * </p>
+ * 
+ * <pre>{@code
+ * // Simple boolean check
+ * if (player.hasPermission("cmd.teleport")) { ... }
+ *
+ * // Dynamic value (e.g., max homes limit)
+ * int maxHomes = player.getPermissionValue("homes.limit").asInt(3);
+ * }</pre>
+ *
+ * @see PermissionHolder
+ * @see PermissionResult
  */
-public interface TalePlayer extends TaleEntity {
+public interface TalePlayer extends TaleEntity, PermissionHolder {
 
   /**
    * Returns the player's unique identifier.
@@ -43,20 +65,26 @@ public interface TalePlayer extends TaleEntity {
   /**
    * Checks if the player has the specified permission.
    * <p>
-   * Permissions are dot-separated strings following the LuckPerms convention
+   * Permissions are dot-separated strings following a hierarchical convention
    * (e.g., "server.admin.kick", "world.edit", "chat.color").
    * </p>
    * <p>
    * Permission checking supports wildcards:
    * <ul>
-   *   <li>{@code server.admin.*} - grants all permissions under server.admin</li>
-   *   <li>{@code *} - grants all permissions</li>
+   * <li>{@code server.admin.*} - grants all permissions under server.admin</li>
+   * <li>{@code *} - grants all permissions</li>
    * </ul>
+   * </p>
+   * <p>
+   * This method is inherited from {@link PermissionHolder} and delegates to
+   * the active {@link dev.polv.taleapi.permission.PermissionService}.
    * </p>
    *
    * @param permission the permission node to check
-   * @return {@code true} if the player has the permission, {@code false} otherwise
+   * @return {@code true} if the player has the permission, {@code false}
+   *         otherwise
    */
+  @Override
   boolean hasPermission(String permission);
 
   /**

@@ -2,6 +2,9 @@ package dev.polv.taleapi.testutil;
 
 import dev.polv.taleapi.command.CommandSender;
 import dev.polv.taleapi.entity.TalePlayer;
+import dev.polv.taleapi.permission.ContextSet;
+import dev.polv.taleapi.permission.PermissionResult;
+import dev.polv.taleapi.permission.PermissionService;
 import dev.polv.taleapi.world.Location;
 
 import java.util.ArrayList;
@@ -16,6 +19,13 @@ import java.util.UUID;
  * This class provides a simple in-memory implementation of the TalePlayer
  * interface that can be used across all tests. Also implements
  * {@link CommandSender} for command testing.
+ * </p>
+ * <p>
+ * This test player supports two modes:
+ * <ul>
+ *   <li><b>Local mode:</b> Uses internal permission set (default)</li>
+ *   <li><b>Service mode:</b> Delegates to PermissionService when available</li>
+ * </ul>
  * </p>
  */
 public class TestPlayer implements TalePlayer, CommandSender {
@@ -77,6 +87,27 @@ public class TestPlayer implements TalePlayer, CommandSender {
 
   @Override
   public boolean hasPermission(String permission) {
+    // First, try to use the PermissionService if available
+    PermissionService service = PermissionService.getInstance();
+    if (service.hasProvider()) {
+      return service.has(this, permission);
+    }
+    
+    // Fall back to local permission checking
+    return hasLocalPermission(permission);
+  }
+  
+  /**
+   * Checks if this player has a permission using only local storage.
+   * <p>
+   * This bypasses the PermissionService and uses the internal permission set.
+   * Useful for tests that don't want to set up a full permission provider.
+   * </p>
+   *
+   * @param permission the permission to check
+   * @return {@code true} if the player has the permission locally
+   */
+  public boolean hasLocalPermission(String permission) {
     if (isOp) {
       return true;
     }
@@ -101,6 +132,26 @@ public class TestPlayer implements TalePlayer, CommandSender {
       }
     }
     return false;
+  }
+  
+  @Override
+  public PermissionResult getPermissionValue(String permission) {
+    PermissionService service = PermissionService.getInstance();
+    if (service.hasProvider()) {
+      return service.query(this, permission);
+    }
+    // Fall back to simple boolean result
+    return hasLocalPermission(permission) ? PermissionResult.ALLOWED : PermissionResult.UNDEFINED;
+  }
+  
+  @Override
+  public PermissionResult getPermissionValue(String permission, ContextSet context) {
+    PermissionService service = PermissionService.getInstance();
+    if (service.hasProvider()) {
+      return service.query(this, permission, context);
+    }
+    // Local permissions don't support context
+    return getPermissionValue(permission);
   }
 
   @Override

@@ -90,11 +90,11 @@ Usage: `/give Steve diamond 64`
 
 ### StringArgumentType
 
-| Mode | Method | Description | Example Input |
-|------|--------|-------------|---------------|
-| Word | `word()` | Single word (stops at whitespace) | `hello` |
-| String | `string()` | Quoted string or single word | `"hello world"` |
-| Greedy | `greedyString()` | All remaining input | `hello world this is everything` |
+| Mode   | Method           | Description                       | Example Input                    |
+| ------ | ---------------- | --------------------------------- | -------------------------------- |
+| Word   | `word()`         | Single word (stops at whitespace) | `hello`                          |
+| String | `string()`       | Quoted string or single word      | `"hello world"`                  |
+| Greedy | `greedyString()` | All remaining input               | `hello world this is everything` |
 
 ```java
 // Single word
@@ -199,14 +199,14 @@ Command.builder("fly")
 
 ### Permission Format
 
-Permissions use a dot-separated hierarchy (like LuckPerms):
+Permissions use a dot-separated hierarchy:
 
-| Permission | Grants Access To |
-|------------|------------------|
-| `server.admin.kick` | Exact permission |
-| `server.admin.*` | All `server.admin.X` permissions |
-| `server.*` | All `server.X.Y` permissions |
-| `*` | All permissions |
+| Permission          | Grants Access To                 |
+| ------------------- | -------------------------------- |
+| `server.admin.kick` | Exact permission                 |
+| `server.admin.*`    | All `server.admin.X` permissions |
+| `server.*`          | All `server.X.Y` permissions     |
+| `*`                 | All permissions                  |
 
 ```java
 // Player permission checks
@@ -219,6 +219,7 @@ player.hasPermission("server.admin.ban");   // Granted by "server.admin.*"
 ### Built-in Suggestions
 
 Argument types provide default suggestions:
+
 - `BooleanArgumentType` suggests `true` and `false`
 - `IntegerArgumentType` suggests common values like `0`, `1`, `10`
 
@@ -276,6 +277,55 @@ for (Suggestion suggestion : suggestions.getList()) {
 CompletableFuture<Suggestions> future = command.getSuggestions(sender, "gamemode s");
 ```
 
+## Command Senders
+
+Commands can be executed by different types of senders. The `CommandSender` interface is the base for all command sources:
+
+### Players
+
+Players implement both `TalePlayer` and `CommandSender`:
+
+```java
+.executes(ctx -> {
+    CommandSender sender = ctx.getSender();
+
+    if (sender.isPlayer()) {
+        TalePlayer player = sender.asPlayer();
+        player.teleport(someLocation);
+    } else {
+        sender.sendMessage("This command can only be used by players!");
+        return CommandResult.FAILURE;
+    }
+
+    return CommandResult.SUCCESS;
+})
+```
+
+### Console
+
+The console (or server) can also execute commands. Console senders typically have all permissions:
+
+```java
+// Check sender type
+if (!sender.isPlayer()) {
+    // This is the console
+    System.out.println("Command executed from console");
+}
+
+// Console always has permissions
+sender.hasPermission("any.permission"); // true for console
+```
+
+### CommandSender Methods
+
+| Method                  | Description                                 |
+| ----------------------- | ------------------------------------------- |
+| `sendMessage(String)`   | Send a message to the sender                |
+| `hasPermission(String)` | Check if sender has permission              |
+| `getName()`             | Get sender name ("Console" or player name)  |
+| `isPlayer()`            | Check if sender is a player                 |
+| `asPlayer()`            | Get as TalePlayer (or null if not a player) |
+
 ## Command Context
 
 The `CommandContext` provides access to the sender, parsed arguments, and raw input:
@@ -284,52 +334,52 @@ The `CommandContext` provides access to the sender, parsed arguments, and raw in
 .executes(ctx -> {
     // Get the command sender
     CommandSender sender = ctx.getSender();
-    
+
     // Check if sender is a player
     if (sender.isPlayer()) {
         TalePlayer player = sender.asPlayer();
     }
-    
+
     // Get parsed arguments
     String name = ctx.getArgument("name", String.class);
     int count = ctx.getArgument("count", Integer.class);
-    
+
     // Optional arguments
     Optional<String> reason = ctx.getOptionalArgument("reason", String.class);
-    
+
     // Check if argument exists
     if (ctx.hasArgument("target")) {
         // ...
     }
-    
+
     // Get raw input
     String rawInput = ctx.getRawInput();
-    
+
     // Get the command being executed
     Command command = ctx.getCommand();
-    
+
     return CommandResult.SUCCESS;
 })
 ```
 
 ## Command Results
 
-| Result | Meaning | Use Case |
-|--------|---------|----------|
-| `SUCCESS` | Command executed successfully | Normal completion |
-| `FAILURE` | Command failed to execute | Logic failure (player not found, etc.) |
-| `PASS` | Command was not handled | Pass to next handler |
+| Result    | Meaning                       | Use Case                               |
+| --------- | ----------------------------- | -------------------------------------- |
+| `SUCCESS` | Command executed successfully | Normal completion                      |
+| `FAILURE` | Command failed to execute     | Logic failure (player not found, etc.) |
+| `PASS`    | Command was not handled       | Pass to next handler                   |
 
 ```java
 .executes(ctx -> {
     String playerName = ctx.getArgument("player", String.class);
     TalePlayer target = findPlayer(playerName);
-    
+
     if (target == null) {
         ctx.getSender().sendMessage("Player not found: " + playerName);
         return CommandResult.FAILURE;
     }
-    
+
     // Do something with target...
     return CommandResult.SUCCESS;
 })
@@ -352,27 +402,27 @@ All of these work: `/teleport`, `/tp`, `/warp`, `/goto`
 
 ### CommandException Types
 
-| Type | Description |
-|------|-------------|
-| `SYNTAX` | Invalid command syntax |
+| Type         | Description                 |
+| ------------ | --------------------------- |
+| `SYNTAX`     | Invalid command syntax      |
 | `PERMISSION` | Missing required permission |
-| `ARGUMENT` | Invalid argument value |
-| `EXECUTION` | General execution failure |
+| `ARGUMENT`   | Invalid argument value      |
+| `EXECUTION`  | General execution failure   |
 
 ### Throwing Exceptions
 
 ```java
 .executes(ctx -> {
     String mode = ctx.getArgument("mode", String.class);
-    
+
     if (!isValidMode(mode)) {
         throw CommandException.argument("mode", "Invalid game mode: " + mode);
     }
-    
+
     if (!ctx.getSender().hasPermission("server.gamemode." + mode)) {
         throw CommandException.permission("server.gamemode." + mode);
     }
-    
+
     return CommandResult.SUCCESS;
 })
 ```
@@ -391,6 +441,82 @@ try {
     }
 }
 ```
+
+## Command Execution Event
+
+The `CommandExecuteCallback` event fires whenever a command is about to be executed. This allows you to:
+
+- Cancel command execution
+- Log command usage
+- Implement command cooldowns
+- Block commands in certain contexts (e.g., during a minigame)
+
+### Basic Usage
+
+```java
+// Log all command usage
+CommandExecuteCallback.EVENT.register((sender, command, input) -> {
+    System.out.println(sender.getName() + " executed: /" + input);
+    return EventResult.PASS;
+});
+```
+
+### Cancelling Commands
+
+```java
+// Block all commands during a match
+CommandExecuteCallback.EVENT.register(EventPriority.HIGHEST, (sender, command, input) -> {
+    if (sender.isPlayer() && isInMatch(sender.asPlayer())) {
+        if (!command.getName().equals("leave")) {
+            sender.sendMessage("Commands are disabled during the match!");
+            return EventResult.CANCEL;
+        }
+    }
+    return EventResult.PASS;
+});
+```
+
+### Command Cooldowns
+
+```java
+private Map<String, Map<String, Long>> cooldowns = new HashMap<>();
+
+CommandExecuteCallback.EVENT.register((sender, command, input) -> {
+    if (!sender.isPlayer()) return EventResult.PASS;
+
+    String playerId = sender.asPlayer().getUniqueId();
+    String cmdName = command.getName();
+
+    long now = System.currentTimeMillis();
+    long lastUse = cooldowns
+        .computeIfAbsent(playerId, k -> new HashMap<>())
+        .getOrDefault(cmdName, 0L);
+
+    if (now - lastUse < 5000) { // 5 second cooldown
+        sender.sendMessage("Please wait before using this command again!");
+        return EventResult.CANCEL;
+    }
+
+    cooldowns.get(playerId).put(cmdName, now);
+    return EventResult.PASS;
+});
+```
+
+### Event Parameters
+
+| Parameter | Description                                                   |
+| --------- | ------------------------------------------------------------- |
+| `sender`  | The `CommandSender` executing the command (player or console) |
+| `command` | The `Command` being executed                                  |
+| `input`   | The full command input string (without leading slash)         |
+
+### Return Values
+
+| Result                | Effect                                          |
+| --------------------- | ----------------------------------------------- |
+| `EventResult.PASS`    | Continue to next listener, then execute command |
+| `EventResult.SUCCESS` | Stop listeners, execute the command             |
+| `EventResult.CANCEL`  | Stop listeners, do NOT execute the command      |
 
 ## CommandRegistry API
 
@@ -456,12 +582,12 @@ CommandRegisterCallback.EVENT.register(registry -> {
                     String target = ctx.getArgument("player", String.class);
                     String message = ctx.getArgument("message", String.class);
                     TalePlayer recipient = findPlayer(target);
-                    
+
                     if (recipient == null) {
                         ctx.getSender().sendMessage("Player not found!");
                         return CommandResult.FAILURE;
                     }
-                    
+
                     recipient.sendMessage("[" + ctx.getSender().getName() + "] " + message);
                     ctx.getSender().sendMessage("[You -> " + target + "] " + message);
                     return CommandResult.SUCCESS;
@@ -502,47 +628,46 @@ CommandRegisterCallback.EVENT.register(registry -> {
 
 ### Command.Builder Methods
 
-| Method | Description |
-|--------|-------------|
-| `description(String)` | Set command description |
-| `aliases(String...)` | Add command aliases |
-| `permission(String)` | Set required permission |
-| `requires(Predicate<CommandSender>)` | Set custom requirement |
-| `then(CommandNode)` | Add child node (literal or argument) |
-| `executes(CommandExecutor)` | Set executor for this node |
-| `build()` | Build the command |
+| Method                               | Description                          |
+| ------------------------------------ | ------------------------------------ |
+| `description(String)`                | Set command description              |
+| `aliases(String...)`                 | Add command aliases                  |
+| `permission(String)`                 | Set required permission              |
+| `requires(Predicate<CommandSender>)` | Set custom requirement               |
+| `then(CommandNode)`                  | Add child node (literal or argument) |
+| `executes(CommandExecutor)`          | Set executor for this node           |
+| `build()`                            | Build the command                    |
 
 ### CommandNode Methods
 
-| Method | Description |
-|--------|-------------|
-| `Command.literal(String)` | Create a literal node |
-| `Command.argument(String, ArgumentType)` | Create an argument node |
-| `then(CommandNode)` | Add child node |
-| `executes(CommandExecutor)` | Set executor |
-| `requires(String)` | Set permission requirement |
-| `requires(Predicate<CommandSender>)` | Set custom requirement |
-| `suggests(SuggestionProvider)` | Set custom suggestions (ArgumentNode only) |
+| Method                                   | Description                                |
+| ---------------------------------------- | ------------------------------------------ |
+| `Command.literal(String)`                | Create a literal node                      |
+| `Command.argument(String, ArgumentType)` | Create an argument node                    |
+| `then(CommandNode)`                      | Add child node                             |
+| `executes(CommandExecutor)`              | Set executor                               |
+| `requires(String)`                       | Set permission requirement                 |
+| `requires(Predicate<CommandSender>)`     | Set custom requirement                     |
+| `suggests(SuggestionProvider)`           | Set custom suggestions (ArgumentNode only) |
 
 ### CommandContext Methods
 
-| Method | Description |
-|--------|-------------|
-| `getSender()` | Get the command sender |
-| `getRawInput()` | Get the raw command input |
-| `getCommand()` | Get the executing command |
-| `getArgument(name, Class)` | Get parsed argument (throws if missing) |
-| `getOptionalArgument(name, Class)` | Get argument as Optional |
-| `hasArgument(name)` | Check if argument exists |
-| `getArguments()` | Get all arguments as Map |
+| Method                             | Description                             |
+| ---------------------------------- | --------------------------------------- |
+| `getSender()`                      | Get the command sender                  |
+| `getRawInput()`                    | Get the raw command input               |
+| `getCommand()`                     | Get the executing command               |
+| `getArgument(name, Class)`         | Get parsed argument (throws if missing) |
+| `getOptionalArgument(name, Class)` | Get argument as Optional                |
+| `hasArgument(name)`                | Check if argument exists                |
+| `getArguments()`                   | Get all arguments as Map                |
 
 ### CommandSender Methods
 
-| Method | Description |
-|--------|-------------|
-| `sendMessage(String)` | Send a message |
-| `hasPermission(String)` | Check permission |
-| `getName()` | Get sender name |
-| `isPlayer()` | Check if sender is a player |
-| `asPlayer()` | Get as TalePlayer (or null) |
-
+| Method                  | Description                 |
+| ----------------------- | --------------------------- |
+| `sendMessage(String)`   | Send a message              |
+| `hasPermission(String)` | Check permission            |
+| `getName()`             | Get sender name             |
+| `isPlayer()`            | Check if sender is a player |
+| `asPlayer()`            | Get as TalePlayer (or null) |

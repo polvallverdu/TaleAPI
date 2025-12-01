@@ -40,4 +40,30 @@ public interface TalePlayer extends TaleEntity {
    */
   String getDisplayName();
 
+  /**
+   * Checks if the player has the specified permission.
+   * <p>
+   * Permissions are dot-separated strings following the LuckPerms convention
+   * (e.g., "server.admin.kick", "world.edit", "chat.color").
+   * </p>
+   * <p>
+   * Permission checking supports wildcards:
+   * <ul>
+   *   <li>{@code server.admin.*} - grants all permissions under server.admin</li>
+   *   <li>{@code *} - grants all permissions</li>
+   * </ul>
+   * </p>
+   *
+   * @param permission the permission node to check
+   * @return {@code true} if the player has the permission, {@code false} otherwise
+   */
+  boolean hasPermission(String permission);
+
+  /**
+   * Sends a message to the player.
+   *
+   * @param message the message to send
+   */
+  void sendMessage(String message);
+
 }

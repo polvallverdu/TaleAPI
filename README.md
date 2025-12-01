@@ -21,6 +21,8 @@ This API aims to be **clean**, **robust**, **performant**, and **easy to use**.
 With those principles in mind, this API features:
 
 - 🎯 **Event system** — Priorities, cancellation, and async support
+- 💬 **Command API** — Brigadier-inspired commands with autocompletion and permissions
+- ⚙️ **Configuration API** — Object mapping and dynamic access with JSON support
 - 🎮 **Entity abstraction** — Type-safe entity handling
 - 🧱 **Block & Item abstractions** — Simplified block and item management
 - 🔧 **Code generation** — Automatically generate JSON files from annotations
@@ -42,6 +44,8 @@ dependencies {
 ## Documentation
 
 - [Events](docs/events.md) — Event system with priorities and cancellation
+- [Commands](docs/commands.md) — Brigadier-inspired command API with autocompletion
+- [Configuration](docs/config.md) — Type-safe configuration loading and saving
 - [Codegen](docs/codegen.md) — Generate JSON files from annotated classes
 
 ## Roadmap

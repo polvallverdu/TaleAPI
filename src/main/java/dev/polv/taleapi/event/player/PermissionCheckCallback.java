@@ -12,12 +12,12 @@ import java.util.Objects;
  * <p>
  * This event allows plugins to temporarily override permissions without modifying
  * the underlying permission data. Common use cases include:
+ * </p>
  * <ul>
  *   <li>Denying all commands during a minigame match</li>
  *   <li>Granting temporary permissions during an event</li>
  *   <li>Implementing custom permission logic based on game state</li>
  * </ul>
- * </p>
  *
  * <h2>Example Usage</h2>
  * <pre>{@code
@@ -80,13 +80,13 @@ public interface PermissionCheckCallback {
      * Represents the result of a permission check callback.
      * <p>
      * Use the static factory methods to create instances:
+     * </p>
      * <ul>
      *   <li>{@link #unmodified()} - Keep the original result</li>
      *   <li>{@link #allow()} - Override to ALLOW</li>
      *   <li>{@link #deny()} - Override to DENY</li>
      *   <li>{@link #override(PermissionResult)} - Override with a custom result</li>
      * </ul>
-     * </p>
      */
     final class CheckResult {
         private static final CheckResult UNMODIFIED = new CheckResult(null, false);

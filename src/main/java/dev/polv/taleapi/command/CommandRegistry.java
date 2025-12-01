@@ -22,15 +22,16 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * </p>
  *
  * <h2>Example Usage</h2>
+ * 
  * <pre>{@code
  * // Register during the command registration event
  * CommandRegisterCallback.EVENT.register(registry -> {
- *     registry.register(Command.builder("hello")
- *         .executes(ctx -> {
- *             ctx.getSender().sendMessage("Hello, World!");
- *             return CommandResult.SUCCESS;
- *         })
- *         .build());
+ *   registry.register(Command.builder("hello")
+ *       .executes(ctx -> {
+ *         ctx.getSender().sendMessage("Hello, World!");
+ *         return CommandResult.SUCCESS;
+ *       })
+ *       .build());
  * });
  *
  * // Execute a command
@@ -59,7 +60,8 @@ public final class CommandRegistry {
    * Registers a command.
    *
    * @param command the command to register
-   * @throws IllegalArgumentException if a command with the same name or alias is already registered
+   * @throws IllegalArgumentException if a command with the same name or alias is
+   *                                  already registered
    */
   public void register(Command command) {
     Objects.requireNonNull(command, "command");
@@ -233,8 +235,8 @@ public final class CommandRegistry {
 
     if (parts.length == 1 && !normalizedInput.endsWith(" ")) {
       // Suggest command names
-      dev.polv.taleapi.command.suggestion.SuggestionsBuilder builder =
-          new dev.polv.taleapi.command.suggestion.SuggestionsBuilder(normalizedInput, 0);
+      dev.polv.taleapi.command.suggestion.SuggestionsBuilder builder = new dev.polv.taleapi.command.suggestion.SuggestionsBuilder(
+          normalizedInput, 0);
 
       lock.readLock().lock();
       try {
@@ -314,4 +316,3 @@ public final class CommandRegistry {
     }
   }
 }
-

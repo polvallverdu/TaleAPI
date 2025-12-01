@@ -120,12 +120,12 @@ public final class PermissionService {
      * Queries a permission for a player.
      * <p>
      * This method:
+     * </p>
      * <ol>
      * <li>Delegates to the active provider</li>
      * <li>Fires a {@link PermissionCheckCallback} event</li>
      * <li>Returns the (possibly modified) result</li>
      * </ol>
-     * </p>
      *
      * @param player the player to check
      * @param key    the permission key

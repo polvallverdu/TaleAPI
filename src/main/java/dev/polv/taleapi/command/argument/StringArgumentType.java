@@ -6,12 +6,12 @@ import dev.polv.taleapi.command.CommandException;
  * Argument type for string values.
  * <p>
  * Provides three modes:
+ * </p>
  * <ul>
  *   <li>{@link #word()} - Single word (no spaces, stops at whitespace)</li>
  *   <li>{@link #string()} - Quoted string or single word</li>
  *   <li>{@link #greedyString()} - Consumes all remaining input</li>
  * </ul>
- * </p>
  *
  * <h2>Example Usage</h2>
  * <pre>{@code

@@ -7,13 +7,13 @@ import java.util.Objects;
  * <p>
  * Unlike traditional permission systems where a permission is just a string
  * mapped to a boolean, a PermissionNode is a rich state object containing:
+ * </p>
  * <ul>
  *   <li><b>Key:</b> The permission path (e.g., "plots.limit")</li>
  *   <li><b>State:</b> A {@link Tristate} (ALLOW, DENY, UNDEFINED)</li>
  *   <li><b>Payload:</b> An arbitrary value (Integer, Double, String, etc.)</li>
  *   <li><b>Context:</b> Conditions for when this permission applies</li>
  * </ul>
- * </p>
  *
  * <h2>Solving Dynamic Values</h2>
  * <pre>{@code

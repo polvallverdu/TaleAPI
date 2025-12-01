@@ -11,12 +11,12 @@ import java.util.concurrent.CompletableFuture;
  * Defines how to parse and suggest a command argument.
  * <p>
  * Each argument type knows how to:
+ * </p>
  * <ul>
  *   <li>Parse a string input into a typed value</li>
  *   <li>Provide tab-completion suggestions</li>
  *   <li>Describe the expected format for error messages</li>
  * </ul>
- * </p>
  *
  * <h2>Built-in Types</h2>
  * <ul>

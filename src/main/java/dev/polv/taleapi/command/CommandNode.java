@@ -16,11 +16,11 @@ import java.util.function.Predicate;
  * Base class for command tree nodes.
  * <p>
  * A command is structured as a tree of nodes, where each node can be:
+ * </p>
  * <ul>
  *   <li>{@link LiteralNode} - A fixed text literal (like "gamemode", "give")</li>
  *   <li>{@link ArgumentNode} - A typed argument that parses input</li>
  * </ul>
- * </p>
  *
  * <h2>Example Tree Structure</h2>
  * <pre>{@code
@@ -35,11 +35,23 @@ import java.util.function.Predicate;
  */
 public abstract class CommandNode<T extends CommandNode<T>> {
 
+  /** The name of this command node. */
   protected final String name;
+
+  /** The child nodes of this command node. */
   protected final List<CommandNode<?>> children;
+
+  /** The executor that handles command execution for this node. */
   protected CommandExecutor executor;
+
+  /** The requirement predicate that must be satisfied for this command to be available. */
   protected Predicate<CommandSender> requirement;
 
+  /**
+   * Creates a new command node with the given name.
+   *
+   * @param name the name of this command node
+   */
   protected CommandNode(String name) {
     this.name = Objects.requireNonNull(name, "name");
     this.children = new ArrayList<>();
@@ -196,6 +208,11 @@ public abstract class CommandNode<T extends CommandNode<T>> {
    */
   public static class LiteralNode extends CommandNode<LiteralNode> {
 
+    /**
+     * Creates a new literal node with the given name.
+     *
+     * @param name the literal text this node matches
+     */
     public LiteralNode(String name) {
       super(name);
     }
@@ -241,9 +258,18 @@ public abstract class CommandNode<T extends CommandNode<T>> {
    */
   public static class ArgumentNode<V> extends CommandNode<ArgumentNode<V>> {
 
+    /** The argument type that defines how to parse this argument. */
     private final ArgumentType<V> type;
+
+    /** The suggestion provider for this argument, or null for default suggestions. */
     private SuggestionProvider suggestionProvider;
 
+    /**
+     * Creates a new argument node with the given name and type.
+     *
+     * @param name the name of this argument node
+     * @param type the argument type for parsing
+     */
     public ArgumentNode(String name, ArgumentType<V> type) {
       super(name);
       this.type = Objects.requireNonNull(type, "type");

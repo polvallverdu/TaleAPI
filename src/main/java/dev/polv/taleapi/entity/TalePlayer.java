@@ -70,11 +70,11 @@ public interface TalePlayer extends TaleEntity, PermissionHolder {
    * </p>
    * <p>
    * Permission checking supports wildcards:
+   * </p>
    * <ul>
    * <li>{@code server.admin.*} - grants all permissions under server.admin</li>
    * <li>{@code *} - grants all permissions</li>
    * </ul>
-   * </p>
    * <p>
    * This method is inherited from {@link PermissionHolder} and delegates to
    * the active {@link dev.polv.taleapi.permission.PermissionService}.

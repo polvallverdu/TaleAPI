@@ -164,6 +164,7 @@ public final class SuggestionsBuilder {
   /**
    * Creates a new builder with the same input but cleared suggestions.
    *
+   * @param start the new start position for suggestions
    * @return a new builder
    */
   public SuggestionsBuilder createOffset(int start) {

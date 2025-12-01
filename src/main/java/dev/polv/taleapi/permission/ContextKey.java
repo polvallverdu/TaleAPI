@@ -5,15 +5,17 @@ import java.util.Objects;
 /**
  * Represents a context key used in permission context matching.
  * <p>
- * Context keys are typed identifiers for context values. Common built-in keys include:
- * <ul>
- *   <li>{@code world} - The world name (e.g., "nether", "overworld")</li>
- *   <li>{@code server} - The server name in a network</li>
- *   <li>{@code gamemode} - The player's gamemode</li>
- * </ul>
+ * Context keys are typed identifiers for context values. Common built-in keys
+ * include:
  * </p>
+ * <ul>
+ * <li>{@code world} - The world name (e.g., "nether", "overworld")</li>
+ * <li>{@code server} - The server name in a network</li>
+ * <li>{@code gamemode} - The player's gamemode</li>
+ * </ul>
  *
  * <h2>Example</h2>
+ * 
  * <pre>{@code
  * ContextKey<String> WORLD = ContextKey.of("world", String.class);
  * ContextKey<String> GAMEMODE = ContextKey.of("gamemode", String.class);
@@ -24,8 +26,14 @@ import java.util.Objects;
 public final class ContextKey<T> {
 
     // Built-in context keys
+
+    /** Context key for the world name (e.g., "nether", "overworld"). */
     public static final ContextKey<String> WORLD = of("world", String.class);
+
+    /** Context key for the server name in a network. */
     public static final ContextKey<String> SERVER = of("server", String.class);
+
+    /** Context key for the player's gamemode. */
     public static final ContextKey<String> GAMEMODE = of("gamemode", String.class);
 
     private final String key;
@@ -68,8 +76,10 @@ public final class ContextKey<T> {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof ContextKey<?> that)) return false;
+        if (this == o)
+            return true;
+        if (!(o instanceof ContextKey<?> that))
+            return false;
         return key.equals(that.key) && type.equals(that.type);
     }
 
@@ -83,4 +93,3 @@ public final class ContextKey<T> {
         return "ContextKey{" + key + ", type=" + type.getSimpleName() + "}";
     }
 }
-

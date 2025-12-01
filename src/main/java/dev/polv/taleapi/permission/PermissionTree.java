@@ -151,13 +151,13 @@ public final class PermissionTree {
    * Queries the tree for a permission result with context.
    * <p>
    * This method traverses the tree segment by segment:
+   * </p>
    * <ol>
    * <li>At each level, check for a wildcard (*) node</li>
    * <li>If wildcard exists and matches context, return its result</li>
    * <li>Continue to the specific segment if no wildcard match</li>
    * <li>At the final segment, return the node's result if it matches context</li>
    * </ol>
-   * </p>
    *
    * @param key     the permission key to query
    * @param context the current context to match against

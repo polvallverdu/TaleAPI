@@ -11,12 +11,12 @@ import java.util.UUID;
  * Represents the game server and provides access to server-wide functionality.
  * <p>
  * TaleServer is the central access point for:
+ * </p>
  * <ul>
  *   <li>Online player management and tracking</li>
  *   <li>Permission service access</li>
  *   <li>Server configuration</li>
  * </ul>
- * </p>
  *
  * <h2>Player Tracking</h2>
  * <p>

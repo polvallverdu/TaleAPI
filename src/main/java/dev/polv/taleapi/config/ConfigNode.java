@@ -331,13 +331,13 @@ public interface ConfigNode {
    * Gets this node's value as a raw Object.
    * <p>
    * Returns:
+   * </p>
    * <ul>
    *   <li>String, Number, Boolean for primitives</li>
    *   <li>List for arrays</li>
    *   <li>Map for objects</li>
    *   <li>null for null nodes</li>
    * </ul>
-   * </p>
    *
    * @return the raw value
    */

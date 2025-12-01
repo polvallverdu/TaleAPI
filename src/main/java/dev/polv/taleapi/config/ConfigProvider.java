@@ -11,33 +11,29 @@ import java.io.Writer;
  * </p>
  *
  * <h2>Example Implementation</h2>
- * 
- * <pre>
- * {
- *   &#64;code
- *   public class JsonProvider implements ConfigProvider {
- *     &#64;Override
- *     public <T> T deserialize(Reader reader, Class<T> type) throws ConfigException {
- *       // Parse JSON and return typed object
- *     }
+ * <pre>{@code
+ * public class JsonProvider implements ConfigProvider {
+ *   @Override
+ *   public <T> T deserialize(Reader reader, Class<T> type) throws ConfigException {
+ *     // Parse JSON and return typed object
+ *   }
  *
- *     &#64;Override
- *     public ConfigNode deserializeToNode(Reader reader) throws ConfigException {
- *       // Parse JSON and return a traversable node
- *     }
+ *   @Override
+ *   public ConfigNode deserializeToNode(Reader reader) throws ConfigException {
+ *     // Parse JSON and return a traversable node
+ *   }
  *
- *     &#64;Override
- *     public <T> void serialize(Writer writer, T value) throws ConfigException {
- *       // Write object as JSON
- *     }
+ *   @Override
+ *   public <T> void serialize(Writer writer, T value) throws ConfigException {
+ *     // Write object as JSON
+ *   }
  *
- *     @Override
- *     public String fileExtension() {
- *       return "json";
- *     }
+ *   @Override
+ *   public String fileExtension() {
+ *     return "json";
  *   }
  * }
- * </pre>
+ * }</pre>
  *
  * @see ConfigLoader
  * @see ConfigNode

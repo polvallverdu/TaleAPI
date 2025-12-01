@@ -4,22 +4,22 @@ package dev.polv.taleapi.permission;
  * Represents a tri-valued permission state.
  * <p>
  * Unlike a simple boolean, Tristate provides three distinct states:
+ * </p>
  * <ul>
  *   <li>{@link #ALLOW} - Permission is explicitly granted</li>
  *   <li>{@link #DENY} - Permission is explicitly denied</li>
  *   <li>{@link #UNDEFINED} - No explicit permission set (inherit from parent/default)</li>
  * </ul>
- * </p>
  *
  * <h2>Why Tristate?</h2>
  * <p>
  * A binary true/false system cannot distinguish between "denied" and "not set".
  * This distinction is crucial for permission inheritance:
+ * </p>
  * <ul>
  *   <li>UNDEFINED permissions inherit from parent groups</li>
  *   <li>DENY permissions block inheritance even if a parent allows it</li>
  * </ul>
- * </p>
  */
 public enum Tristate {
     /**

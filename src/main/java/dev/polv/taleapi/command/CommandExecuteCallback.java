@@ -7,43 +7,45 @@ import dev.polv.taleapi.event.EventResult;
  * Called when a command is about to be executed.
  * <p>
  * This event fires before the command is dispatched, allowing listeners to:
- * <ul>
- *   <li>Cancel the command execution entirely</li>
- *   <li>Log command usage</li>
- *   <li>Implement command cooldowns</li>
- *   <li>Block specific commands in certain contexts (e.g., during a minigame)</li>
- * </ul>
  * </p>
+ * <ul>
+ * <li>Cancel the command execution entirely</li>
+ * <li>Log command usage</li>
+ * <li>Implement command cooldowns</li>
+ * <li>Block specific commands in certain contexts (e.g., during a
+ * minigame)</li>
+ * </ul>
  * <p>
  * This event is cancellable. If cancelled, the command will not be executed
  * and no error message will be sent to the sender (you should send your own).
  * </p>
  *
  * <h2>Example Usage</h2>
+ * 
  * <pre>{@code
  * // Log all command usage
  * CommandExecuteCallback.EVENT.register((sender, command, input) -> {
- *     System.out.println(sender.getName() + " executed: /" + input);
- *     return EventResult.PASS;
+ *   System.out.println(sender.getName() + " executed: /" + input);
+ *   return EventResult.PASS;
  * });
  *
  * // Block commands during a match
  * CommandExecuteCallback.EVENT.register(EventPriority.HIGHEST, (sender, command, input) -> {
- *     if (isInMatch(sender) && !command.getName().equals("leave")) {
- *         sender.sendMessage("Commands are disabled during the match!");
- *         return EventResult.CANCEL;
- *     }
- *     return EventResult.PASS;
+ *   if (isInMatch(sender) && !command.getName().equals("leave")) {
+ *     sender.sendMessage("Commands are disabled during the match!");
+ *     return EventResult.CANCEL;
+ *   }
+ *   return EventResult.PASS;
  * });
  *
  * // Implement command cooldowns
  * CommandExecuteCallback.EVENT.register((sender, command, input) -> {
- *     if (isOnCooldown(sender, command)) {
- *         sender.sendMessage("Please wait before using this command again!");
- *         return EventResult.CANCEL;
- *     }
- *     setCooldown(sender, command);
- *     return EventResult.PASS;
+ *   if (isOnCooldown(sender, command)) {
+ *     sender.sendMessage("Please wait before using this command again!");
+ *     return EventResult.CANCEL;
+ *   }
+ *   setCooldown(sender, command);
+ *   return EventResult.PASS;
  * });
  * }</pre>
  */

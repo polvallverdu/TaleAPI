@@ -9,6 +9,7 @@ package dev.polv.taleapi.command;
  */
 public class CommandException extends RuntimeException {
 
+  /** The type of this command exception. */
   private final Type type;
 
   /**

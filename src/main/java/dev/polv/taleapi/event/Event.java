@@ -2,6 +2,7 @@ package dev.polv.taleapi.event;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -85,6 +86,54 @@ public final class Event<T> {
    */
   public static <T> Event<T> create(Function<List<T>, T> invokerFactory, T emptyInvoker) {
     return new Event<>(invokerFactory, emptyInvoker);
+  }
+
+  /**
+   * Helper to chain async callback processing in priority order.
+   * <p>
+   * This processes callbacks sequentially, awaiting async results before
+   * proceeding to the next callback. Stops early if any callback returns a
+   * result where {@link EventResult#shouldStop()} is true.
+   * </p>
+   *
+   * <h2>Example Usage</h2>
+   * 
+   * <pre>{@code
+   * Event<PlayerJoinCallback> EVENT = Event.create(
+   *     callbacks -> player -> Event.invokeAsync(
+   *         callbacks.iterator(),
+   *         callback -> callback.onPlayerJoin(player)),
+   *     player -> EventResult.pass());
+   * }</pre>
+   *
+   * @param <T>      the callback type
+   * @param iterator iterator over the callbacks to invoke
+   * @param invoker  function that invokes a callback and returns a future result
+   * @return a CompletableFuture that completes with the final EventResult
+   */
+  public static <T> CompletableFuture<EventResult> invokeAsync(
+      Iterator<T> iterator,
+      Function<T, CompletableFuture<EventResult>> invoker) {
+    return invokeAsyncStep(iterator, invoker, EventResult.PASS);
+  }
+
+  private static <T> CompletableFuture<EventResult> invokeAsyncStep(
+      Iterator<T> iterator,
+      Function<T, CompletableFuture<EventResult>> invoker,
+      EventResult lastResult) {
+
+    if (!iterator.hasNext()) {
+      return CompletableFuture.completedFuture(lastResult);
+    }
+
+    T callback = iterator.next();
+
+    return invoker.apply(callback).thenCompose(result -> {
+      if (result.shouldStop()) {
+        return CompletableFuture.completedFuture(result);
+      }
+      return invokeAsyncStep(iterator, invoker, result);
+    });
   }
 
   /**
@@ -176,6 +225,30 @@ public final class Event<T> {
       return listeners.values().stream()
           .mapToInt(List::size)
           .sum();
+    } finally {
+      lock.readLock().unlock();
+    }
+  }
+
+  /**
+   * Returns a snapshot of all registered listeners in priority order (HIGHEST to
+   * LOWEST).
+   * <p>
+   * This is useful for async event implementations that need direct access to
+   * callbacks.
+   * </p>
+   *
+   * @return an unmodifiable list of listeners
+   */
+  public List<T> getListeners() {
+    lock.readLock().lock();
+    try {
+      List<T> combined = new ArrayList<>();
+      EventPriority[] priorities = EventPriority.values();
+      for (int i = priorities.length - 1; i >= 0; i--) {
+        combined.addAll(listeners.get(priorities[i]));
+      }
+      return List.copyOf(combined);
     } finally {
       lock.readLock().unlock();
     }

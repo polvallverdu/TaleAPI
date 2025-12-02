@@ -312,5 +312,3 @@ class CommandExecuteCallbackTest {
     assertFalse(listenerCalled.get());
   }
 }
-
-

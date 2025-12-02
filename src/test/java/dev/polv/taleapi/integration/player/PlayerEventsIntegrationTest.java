@@ -37,7 +37,7 @@ class PlayerEventsIntegrationTest {
 
     PlayerJoinCallback.EVENT.register(player -> {
       events.add("join:" + player.getDisplayName());
-      return EventResult.PASS;
+      return EventResult.pass();
     });
 
     PlayerQuitCallback.EVENT.register(player -> {
@@ -46,11 +46,11 @@ class PlayerEventsIntegrationTest {
 
     TestPlayer player = new TestPlayer("LifecyclePlayer");
 
-    // Player joins
-    EventResult joinResult = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player);
+    // Player joins (async event, awaited with join())
+    EventResult joinResult = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
     assertFalse(joinResult.isCancelled());
 
-    // Player quits
+    // Player quits (sync event)
     PlayerQuitCallback.EVENT.invoker().onPlayerQuit(player);
 
     assertEquals(List.of("join:LifecyclePlayer", "quit:LifecyclePlayer"), events);
@@ -65,10 +65,10 @@ class PlayerEventsIntegrationTest {
     PlayerJoinCallback.EVENT.register(player -> {
       if (player.getDisplayName().startsWith("Banned")) {
         events.add("blocked:" + player.getDisplayName());
-        return EventResult.CANCEL;
+        return EventResult.cancel();
       }
       events.add("joined:" + player.getDisplayName());
-      return EventResult.PASS;
+      return EventResult.pass();
     });
 
     // Track quits
@@ -81,15 +81,15 @@ class PlayerEventsIntegrationTest {
     TestPlayer player3 = new TestPlayer("Charlie");
 
     // Alice joins successfully
-    EventResult result1 = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player1);
+    EventResult result1 = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player1).join();
     assertFalse(result1.isCancelled());
 
     // BannedBob is blocked
-    EventResult result2 = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player2);
+    EventResult result2 = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player2).join();
     assertTrue(result2.isCancelled());
 
     // Charlie joins successfully
-    EventResult result3 = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player3);
+    EventResult result3 = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player3).join();
     assertFalse(result3.isCancelled());
 
     // Alice and Charlie quit (BannedBob never joined)
@@ -112,7 +112,7 @@ class PlayerEventsIntegrationTest {
 
     PlayerJoinCallback.EVENT.register(player -> {
       joinEvents.add(player.getDisplayName());
-      return EventResult.PASS;
+      return EventResult.pass();
     });
 
     PlayerQuitCallback.EVENT.register(player -> {
@@ -121,7 +121,7 @@ class PlayerEventsIntegrationTest {
 
     TestPlayer player = new TestPlayer("TestUser");
 
-    PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player);
+    PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
     PlayerQuitCallback.EVENT.invoker().onPlayerQuit(player);
 
     assertEquals(List.of("TestUser"), joinEvents);
@@ -135,7 +135,7 @@ class PlayerEventsIntegrationTest {
 
     PlayerJoinCallback.EVENT.register(player -> {
       onlinePlayers.add(player.getDisplayName());
-      return EventResult.PASS;
+      return EventResult.pass();
     });
 
     PlayerQuitCallback.EVENT.register(player -> {
@@ -146,8 +146,8 @@ class PlayerEventsIntegrationTest {
     TestPlayer player2 = new TestPlayer("Player2");
 
     // Join events
-    PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player1);
-    PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player2);
+    PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player1).join();
+    PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player2).join();
     assertEquals(List.of("Player1", "Player2"), onlinePlayers);
 
     // Quit event

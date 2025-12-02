@@ -137,6 +137,62 @@ public final class Event<T> {
   }
 
   /**
+   * Generic helper to chain async callback processing with custom result types.
+   * <p>
+   * This processes callbacks sequentially, awaiting async results before
+   * proceeding to the next callback. Stops early if {@code shouldStop} predicate
+   * returns true for any result.
+   * </p>
+   * <p>
+   * <b>Example Usage:</b>
+   * </p>
+   * <pre>{@code
+   * Event<PlayerJoinCallback> EVENT = Event.create(
+   *     callbacks -> player -> Event.invokeAsync(
+   *         callbacks.iterator(),
+   *         callback -> callback.onPlayerJoin(player),
+   *         PlayerJoinResult::shouldStop,
+   *         PlayerJoinResult.passed()),
+   *     player -> PlayerJoinResult.pass());
+   * }</pre>
+   *
+   * @param <T>          the callback type
+   * @param <R>          the result type
+   * @param iterator     iterator over the callbacks to invoke
+   * @param invoker      function that invokes a callback and returns a future result
+   * @param shouldStop   predicate to determine if processing should stop
+   * @param defaultValue the default result to return if no callbacks stop processing
+   * @return a CompletableFuture that completes with the final result
+   */
+  public static <T, R> CompletableFuture<R> invokeAsync(
+      Iterator<T> iterator,
+      Function<T, CompletableFuture<R>> invoker,
+      java.util.function.Predicate<R> shouldStop,
+      R defaultValue) {
+    return invokeAsyncStep(iterator, invoker, shouldStop, defaultValue);
+  }
+
+  private static <T, R> CompletableFuture<R> invokeAsyncStep(
+      Iterator<T> iterator,
+      Function<T, CompletableFuture<R>> invoker,
+      java.util.function.Predicate<R> shouldStop,
+      R lastResult) {
+
+    if (!iterator.hasNext()) {
+      return CompletableFuture.completedFuture(lastResult);
+    }
+
+    T callback = iterator.next();
+
+    return invoker.apply(callback).thenCompose(result -> {
+      if (shouldStop.test(result)) {
+        return CompletableFuture.completedFuture(result);
+      }
+      return invokeAsyncStep(iterator, invoker, shouldStop, result);
+    });
+  }
+
+  /**
    * Registers a listener with {@link EventPriority#NORMAL} priority.
    *
    * @param listener the listener to register

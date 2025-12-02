@@ -13,19 +13,14 @@ Each event is defined as a **functional interface** with a static `EVENT` field 
 public interface PlayerJoinCallback {
 
   Event<PlayerJoinCallback> EVENT = Event.create(
-      callbacks -> player -> {
-        for (PlayerJoinCallback callback : callbacks) {
-          EventResult result = callback.onPlayerJoin(player);
-          if (result.shouldStop()) {
-            return result;
-          }
-        }
-        return EventResult.PASS;
-      },
-      player -> EventResult.PASS
-  );
+      callbacks -> player -> Event.invokeAsync(
+          callbacks.iterator(),
+          callback -> callback.onPlayerJoin(player),
+          PlayerJoinResult::shouldStop,
+          PlayerJoinResult.passed()),
+      player -> PlayerJoinResult.pass());
 
-  EventResult onPlayerJoin(TalePlayer player);
+  CompletableFuture<PlayerJoinResult> onPlayerJoin(TalePlayer player);
 }
 ```
 
@@ -37,15 +32,15 @@ Use `EVENT.register()` to add a listener:
 // Simple registration (NORMAL priority)
 PlayerJoinCallback.EVENT.register(player -> {
   player.sendMessage("Welcome, " + player.getName() + "!");
-  return EventResult.PASS;
+  return PlayerJoinResult.pass();
 });
 
 // With priority
 PlayerJoinCallback.EVENT.register(EventPriority.HIGHEST, player -> {
   if (isBanned(player)) {
-    return EventResult.CANCEL;
+    return PlayerJoinResult.cancel("You are banned from this server!");
   }
-  return EventResult.PASS;
+  return PlayerJoinResult.pass();
 });
 ```
 
@@ -54,12 +49,14 @@ PlayerJoinCallback.EVENT.register(EventPriority.HIGHEST, player -> {
 To fire an event, call `invoker()` and invoke the callback method:
 
 ```java
-EventResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player);
-
-if (result.isCancelled()) {
-  // Handle cancellation - e.g., kick the player
-  player.kick("You are not allowed to join.");
-}
+PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player)
+    .thenAccept(result -> {
+      if (result.isCancelled()) {
+        // Handle cancellation - kick with custom or default message
+        String message = result.getKickMessage().orElse("You are not allowed to join.");
+        player.kick(message);
+      }
+    });
 ```
 
 ## Priority System
@@ -78,13 +75,13 @@ Listeners are executed in priority order from **HIGHEST to LOWEST**:
 // This runs FIRST
 PlayerJoinCallback.EVENT.register(EventPriority.HIGHEST, player -> {
   System.out.println("I run first!");
-  return EventResult.PASS;
+  return PlayerJoinResult.pass();
 });
 
 // This runs LAST
 PlayerJoinCallback.EVENT.register(EventPriority.LOWEST, player -> {
   System.out.println("I run last!");
-  return EventResult.PASS;
+  return PlayerJoinResult.pass();
 });
 ```
 
@@ -134,6 +131,32 @@ future.thenAccept(result -> {
 | -------------------- | ----------- | -------------------------- |
 | `PlayerJoinCallback` | ✅ Yes      | Called when a player joins |
 | `PlayerQuitCallback` | ❌ No       | Called when a player quits |
+
+#### PlayerJoinCallback with Custom Kick Message
+
+When cancelling a player join, you can provide a custom kick message:
+
+```java
+// Cancel with a custom kick message
+PlayerJoinCallback.EVENT.register(player -> {
+  if (isServerFull()) {
+    return PlayerJoinResult.cancel("Server is full! Try again later.");
+  }
+  if (isBanned(player)) {
+    return PlayerJoinResult.cancel("You have been banned: Cheating");
+  }
+  return PlayerJoinResult.pass();
+});
+
+// When firing the event, retrieve the kick message
+PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player)
+    .thenAccept(result -> {
+      if (result.isCancelled()) {
+        String message = result.getKickMessage().orElse("Connection refused.");
+        player.kick(message);
+      }
+    });
+```
 
 ## Creating Custom Events
 
@@ -212,7 +235,7 @@ Store a reference to your listener to unregister it later:
 ```java
 PlayerJoinCallback myListener = player -> {
   player.sendMessage("Hello!");
-  return EventResult.PASS;
+  return PlayerJoinResult.pass();
 };
 
 // Register

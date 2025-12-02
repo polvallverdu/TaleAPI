@@ -1,7 +1,6 @@
 package dev.polv.taleapi.event.player;
 
 import dev.polv.taleapi.event.EventPriority;
-import dev.polv.taleapi.event.EventResult;
 import dev.polv.taleapi.testutil.TestPlayer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,14 +38,14 @@ class PlayerJoinCallbackTest {
 
       PlayerJoinCallback.EVENT.register(player -> {
         joinedPlayers.add(player.getDisplayName());
-        return EventResult.pass();
+        return PlayerJoinResult.pass();
       });
 
       TestPlayer player = new TestPlayer("TestUser");
-      EventResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
 
       assertEquals(List.of("TestUser"), joinedPlayers);
-      assertEquals(EventResult.PASS, result);
+      assertFalse(result.isCancelled());
     }
 
     @Test
@@ -54,13 +53,13 @@ class PlayerJoinCallbackTest {
     void shouldAllowCancellingJoin() {
       PlayerJoinCallback.EVENT.register(player -> {
         if (player.getDisplayName().equals("BannedUser")) {
-          return EventResult.cancel();
+          return PlayerJoinResult.cancel();
         }
-        return EventResult.pass();
+        return PlayerJoinResult.pass();
       });
 
       TestPlayer bannedPlayer = new TestPlayer("BannedUser");
-      EventResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(bannedPlayer).join();
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(bannedPlayer).join();
 
       assertTrue(result.isCancelled());
     }
@@ -72,15 +71,15 @@ class PlayerJoinCallbackTest {
 
       PlayerJoinCallback.EVENT.register(EventPriority.HIGHEST, player -> {
         order.add("HIGHEST");
-        return EventResult.pass();
+        return PlayerJoinResult.pass();
       });
       PlayerJoinCallback.EVENT.register(EventPriority.LOWEST, player -> {
         order.add("LOWEST");
-        return EventResult.pass();
+        return PlayerJoinResult.pass();
       });
       PlayerJoinCallback.EVENT.register(EventPriority.NORMAL, player -> {
         order.add("NORMAL");
-        return EventResult.pass();
+        return PlayerJoinResult.pass();
       });
 
       TestPlayer player = new TestPlayer("Player");
@@ -97,20 +96,20 @@ class PlayerJoinCallbackTest {
       // Low priority - won't run if HIGH cancels
       PlayerJoinCallback.EVENT.register(EventPriority.LOW, player -> {
         order.add("LOW");
-        return EventResult.pass();
+        return PlayerJoinResult.pass();
       });
 
       // High priority runs first and blocks bots
       PlayerJoinCallback.EVENT.register(EventPriority.HIGH, player -> {
         order.add("HIGH");
         if (player.getDisplayName().startsWith("Bot_")) {
-          return EventResult.cancel();
+          return PlayerJoinResult.cancel();
         }
-        return EventResult.pass();
+        return PlayerJoinResult.pass();
       });
 
       TestPlayer bot = new TestPlayer("Bot_Spammer");
-      EventResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(bot).join();
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(bot).join();
 
       assertTrue(result.isCancelled());
       assertEquals(List.of("HIGH"), order); // LOW never ran
@@ -123,16 +122,16 @@ class PlayerJoinCallbackTest {
 
       PlayerJoinCallback.EVENT.register(EventPriority.HIGHEST, player -> {
         executed.add("HIGHEST");
-        return EventResult.cancel(); // Cancel the event
+        return PlayerJoinResult.cancel(); // Cancel the event
       });
 
       PlayerJoinCallback.EVENT.register(EventPriority.NORMAL, player -> {
         executed.add("NORMAL");
-        return EventResult.pass();
+        return PlayerJoinResult.pass();
       });
 
       TestPlayer player = new TestPlayer("TestUser");
-      EventResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
 
       assertTrue(result.isCancelled());
       assertEquals(List.of("HIGHEST"), executed); // NORMAL never ran
@@ -145,17 +144,17 @@ class PlayerJoinCallbackTest {
 
       PlayerJoinCallback.EVENT.register(EventPriority.NORMAL, player -> {
         executed.add("first");
-        return EventResult.pass();
+        return PlayerJoinResult.pass();
       });
 
       PlayerJoinCallback.EVENT.register(EventPriority.NORMAL, player -> {
         executed.add("second");
-        return EventResult.pass();
+        return PlayerJoinResult.pass();
       });
 
       PlayerJoinCallback.EVENT.register(EventPriority.NORMAL, player -> {
         executed.add("third");
-        return EventResult.pass();
+        return PlayerJoinResult.pass();
       });
 
       TestPlayer player = new TestPlayer("TestUser");
@@ -168,10 +167,9 @@ class PlayerJoinCallbackTest {
     @DisplayName("should return PASS when no listeners are registered")
     void shouldReturnPassWithNoListeners() {
       TestPlayer player = new TestPlayer("TestUser");
-      EventResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
 
       assertFalse(result.isCancelled());
-      assertEquals(EventResult.PASS, result);
     }
   }
 
@@ -189,22 +187,22 @@ class PlayerJoinCallbackTest {
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         }
-        return EventResult.PASS;
+        return PlayerJoinResult.passed();
       }));
 
       TestPlayer player = new TestPlayer("AsyncUser");
-      EventResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
 
-      assertEquals(EventResult.PASS, result);
+      assertFalse(result.isCancelled());
     }
 
     @Test
     @DisplayName("should handle async handler that cancels")
     void shouldHandleAsyncCancel() {
-      PlayerJoinCallback.EVENT.register(player -> CompletableFuture.supplyAsync(() -> EventResult.CANCEL));
+      PlayerJoinCallback.EVENT.register(player -> CompletableFuture.supplyAsync(PlayerJoinResult::cancelled));
 
       TestPlayer player = new TestPlayer("BannedUser");
-      EventResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
 
       assertTrue(result.isCancelled());
     }
@@ -216,17 +214,17 @@ class PlayerJoinCallbackTest {
 
       PlayerJoinCallback.EVENT.register(EventPriority.HIGHEST, player -> CompletableFuture.supplyAsync(() -> {
         order.add("HIGHEST-async");
-        return EventResult.PASS;
+        return PlayerJoinResult.passed();
       }));
 
       PlayerJoinCallback.EVENT.register(EventPriority.NORMAL, player -> {
         order.add("NORMAL-sync");
-        return EventResult.pass();
+        return PlayerJoinResult.pass();
       });
 
       PlayerJoinCallback.EVENT.register(EventPriority.LOWEST, player -> CompletableFuture.supplyAsync(() -> {
         order.add("LOWEST-async");
-        return EventResult.PASS;
+        return PlayerJoinResult.passed();
       }));
 
       TestPlayer player = new TestPlayer("MixedUser");
@@ -242,16 +240,16 @@ class PlayerJoinCallbackTest {
 
       PlayerJoinCallback.EVENT.register(EventPriority.HIGHEST, player -> CompletableFuture.supplyAsync(() -> {
         executed.add("HIGHEST");
-        return EventResult.CANCEL;
+        return PlayerJoinResult.cancelled();
       }));
 
       PlayerJoinCallback.EVENT.register(EventPriority.NORMAL, player -> {
         executed.add("NORMAL");
-        return EventResult.pass();
+        return PlayerJoinResult.pass();
       });
 
       TestPlayer player = new TestPlayer("TestUser");
-      EventResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
 
       assertTrue(result.isCancelled());
       assertEquals(List.of("HIGHEST"), executed); // NORMAL never ran
@@ -264,14 +262,14 @@ class PlayerJoinCallbackTest {
 
       PlayerJoinCallback.EVENT.register(player -> CompletableFuture.supplyAsync(() -> {
         handlerRan.set(true);
-        return EventResult.PASS;
+        return PlayerJoinResult.passed();
       }));
 
       TestPlayer player = new TestPlayer("FutureUser");
-      EventResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
 
       assertTrue(handlerRan.get());
-      assertEquals(EventResult.PASS, result);
+      assertFalse(result.isCancelled());
     }
 
     @Test
@@ -283,14 +281,14 @@ class PlayerJoinCallbackTest {
       try {
         PlayerJoinCallback.EVENT.register(player -> CompletableFuture.supplyAsync(() -> {
           handlerRan.set(true);
-          return EventResult.PASS;
+          return PlayerJoinResult.passed();
         }, executor));
 
         TestPlayer player = new TestPlayer("CustomExecutorUser");
-        EventResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
+        PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
 
         assertTrue(handlerRan.get());
-        assertEquals(EventResult.PASS, result);
+        assertFalse(result.isCancelled());
       } finally {
         executor.shutdown();
       }
@@ -304,15 +302,15 @@ class PlayerJoinCallbackTest {
       for (int i = 0; i < 5; i++) {
         PlayerJoinCallback.EVENT.register(player -> CompletableFuture.supplyAsync(() -> {
           counter.incrementAndGet();
-          return EventResult.PASS;
+          return PlayerJoinResult.passed();
         }));
       }
 
       TestPlayer player = new TestPlayer("ChainUser");
-      EventResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
 
       assertEquals(5, counter.get());
-      assertEquals(EventResult.PASS, result);
+      assertFalse(result.isCancelled());
     }
 
     @Test
@@ -330,13 +328,13 @@ class PlayerJoinCallbackTest {
         }
         order.add(1);
         latch.countDown();
-        return EventResult.PASS;
+        return PlayerJoinResult.passed();
       }));
 
       // Second handler should wait for first
       PlayerJoinCallback.EVENT.register(EventPriority.NORMAL, player -> {
         order.add(2);
-        return EventResult.pass();
+        return PlayerJoinResult.pass();
       });
 
       TestPlayer player = new TestPlayer("SlowUser");
@@ -344,6 +342,103 @@ class PlayerJoinCallbackTest {
 
       assertTrue(latch.await(1, TimeUnit.SECONDS));
       assertEquals(List.of(1, 2), order);
+    }
+  }
+
+  @Nested
+  @DisplayName("Kick Message")
+  class KickMessageTests {
+
+    @Test
+    @DisplayName("should return empty kick message when cancelled without message")
+    void shouldReturnEmptyKickMessageWhenNoMessage() {
+      PlayerJoinCallback.EVENT.register(player -> PlayerJoinResult.cancel());
+
+      TestPlayer player = new TestPlayer("BannedUser");
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
+
+      assertTrue(result.isCancelled());
+      assertTrue(result.getKickMessage().isEmpty());
+    }
+
+    @Test
+    @DisplayName("should return custom kick message when cancelled with message")
+    void shouldReturnCustomKickMessage() {
+      String kickMessage = "You are banned from this server!";
+      PlayerJoinCallback.EVENT.register(player -> PlayerJoinResult.cancel(kickMessage));
+
+      TestPlayer player = new TestPlayer("BannedUser");
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
+
+      assertTrue(result.isCancelled());
+      assertTrue(result.getKickMessage().isPresent());
+      assertEquals(kickMessage, result.getKickMessage().get());
+    }
+
+    @Test
+    @DisplayName("should return empty kick message when event passes")
+    void shouldReturnEmptyKickMessageOnPass() {
+      PlayerJoinCallback.EVENT.register(player -> PlayerJoinResult.pass());
+
+      TestPlayer player = new TestPlayer("NormalUser");
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
+
+      assertFalse(result.isCancelled());
+      assertTrue(result.getKickMessage().isEmpty());
+    }
+
+    @Test
+    @DisplayName("should preserve kick message from async handler")
+    void shouldPreserveKickMessageFromAsyncHandler() {
+      String kickMessage = "Async ban check failed!";
+      PlayerJoinCallback.EVENT.register(player -> CompletableFuture.supplyAsync(() ->
+          PlayerJoinResult.cancelled(kickMessage)
+      ));
+
+      TestPlayer player = new TestPlayer("AsyncBannedUser");
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
+
+      assertTrue(result.isCancelled());
+      assertTrue(result.getKickMessage().isPresent());
+      assertEquals(kickMessage, result.getKickMessage().get());
+    }
+
+    @Test
+    @DisplayName("should preserve kick message from higher priority handler")
+    void shouldPreserveKickMessageFromHigherPriority() {
+      String expectedMessage = "VIP only server!";
+
+      PlayerJoinCallback.EVENT.register(EventPriority.HIGHEST, player ->
+          PlayerJoinResult.cancel(expectedMessage));
+
+      // This won't run because HIGHEST cancelled
+      PlayerJoinCallback.EVENT.register(EventPriority.NORMAL, player ->
+          PlayerJoinResult.cancel("Different message"));
+
+      TestPlayer player = new TestPlayer("NonVIPUser");
+      PlayerJoinResult result = PlayerJoinCallback.EVENT.invoker().onPlayerJoin(player).join();
+
+      assertTrue(result.isCancelled());
+      assertTrue(result.getKickMessage().isPresent());
+      assertEquals(expectedMessage, result.getKickMessage().get());
+    }
+
+    @Test
+    @DisplayName("cancelled() static method should create result without message")
+    void cancelledStaticMethodShouldNotHaveMessage() {
+      PlayerJoinResult result = PlayerJoinResult.cancelled();
+      assertTrue(result.isCancelled());
+      assertTrue(result.getKickMessage().isEmpty());
+    }
+
+    @Test
+    @DisplayName("cancelled(message) static method should create result with message")
+    void cancelledWithMessageStaticMethod() {
+      String message = "Test message";
+      PlayerJoinResult result = PlayerJoinResult.cancelled(message);
+      assertTrue(result.isCancelled());
+      assertTrue(result.getKickMessage().isPresent());
+      assertEquals(message, result.getKickMessage().get());
     }
   }
 }

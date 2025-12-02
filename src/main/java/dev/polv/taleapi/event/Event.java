@@ -95,9 +95,9 @@ public final class Event<T> {
    * proceeding to the next callback. Stops early if any callback returns a
    * result where {@link EventResult#shouldStop()} is true.
    * </p>
-   *
-   * <h2>Example Usage</h2>
-   * 
+   * <p>
+   * <b>Example Usage:</b>
+   * </p>
    * <pre>{@code
    * Event<PlayerJoinCallback> EVENT = Event.create(
    *     callbacks -> player -> Event.invokeAsync(
